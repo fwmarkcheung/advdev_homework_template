@@ -48,26 +48,36 @@ podTemplate(
       }
 
       // The next two stages should run in parallel
-      parallel {
+      stage('Run unit tests & code analysis') {
+        parallel (
 
-        // Using Maven run the unit tests
-        stage('Unit Tests') {
-          echo "Running Unit Tests"
+          // Using Maven run the unit tests
+          "Unit Test": {
+            stage("Unit Tests") {
+              echo "Running Unit Tests"
 
-          // Execute Unit Tests
-          sh "${mvnCmd} test"
-        }
+              // Execute Unit Tests
+              sh "${mvnCmd} test"
 
-        // Using Maven to call SonarQube for Code Analysis
-        stage('Code Analysis') {
-          echo "Running Code Analysis"
+              // This next step is optional.
+              // It displays the results of tests in the Jenkins Task Overview
+              step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
+            }
+          },
 
-          // Execute Sonarqube Tests
-          script {
-            echo "Running Code Analysis"
-            sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube.gpte-hw-cicd.svc.cluster.local:9000 -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
+          // Using Maven to call SonarQube for Code Analysis
+          "Code Analysis": {
+            stage('Code Analysis') {
+              echo "Running Code Analysis"
+
+              // Execute Sonarqube Tests
+              script {
+                echo "Running Code Analysis"
+                sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube.gpte-hw-cicd.svc.cluster.local:9000 -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
+              }
+            }
           }
-        }
+        )
       }
 
       // Publish the built war file to Nexus
